@@ -8,12 +8,13 @@ const int DHTPIN = 2;       //Đọc dữ liệu từ DHT11 ở chân 2 trên m�
 const int DHTTYPE = DHT11;  //Khai báo loại cảm biến, có 2 loại là DHT11 và DHT22
 const int RelayPpm = 7; //Relay Pha che
 const int RelayWaterIn = 8; // Relay Bom nuoc vao thung
-const int RelayWaterOut = 9;// Relay bom nuoc ra khoi thung
-const int RelayMix =10; // Relay motor quay tron hon hop dung dich ding duong
+const int RelayMix =9; // Relay motor quay tron hon hop dung dich ding duong
+const int RelayWaterOut = 10;// Relay bom nuoc ra khoi thung
+
 const int RelayPump = 11; // Relay bom nuoc len cho dan thuy canh
 DHT dht(DHTPIN, DHTTYPE);
 const int Light =  A2;
-String a;
+String dataSend;
 const unsigned int BAUD_RATE = 9600;
 /////EC
 #define ONE_WIRE_BUS 5
@@ -22,7 +23,7 @@ int Ra = 25; //Resistance of powering Pins
 int ECPin = A0;
 int ECGround = A1; //=> Cam vs GND
 int ECPower = A3;
-int relayStatus;
+int relayStatus=0;
 int distance1;
 int SlaveReceived=0;
 //*********** Converting to ppm [Learn to use EC it is much better**************//
@@ -90,7 +91,7 @@ void setup() {
 void loop() {
   if(checkppm == 1){
     digitalWrite(RelayPpm, HIGH);
-    delay(1000);
+    delay(3000);
     digitalWrite(RelayPpm, LOW);
     checkppm = 0;
   }
@@ -130,7 +131,8 @@ void loop() {
   GetEC();          //Calls Code to Go into GetEC() Loop [Below Main Loop] dont call this more that 1/5 hhz [once every five seconds] or you will polarise the water
   PrintReadings();  // Cals Print routine [below main loop]
   // id, device_id, temperature, humidity, light, EC, PPM, water, pump
-  a = "6=" + (String)temp + "=" + (String)h + "=" +(String)lig + "=" + (String)EC25 + "=" + (String)ppm + "=" + (String)distance + "="  +(String)relayStatus;  //(String)Temperature+"="+
+  dataSend = "6=" + (String)temp + "=" + (String)h + "=" +(String)lig + "=" + (String)EC25 + "=" + (String)ppm + "=" + (String)distance + "="  +(String)relayStatus;
+  Serial.println(dataSend);
   Serial.println("relayStatus");
   Serial.println(relayStatus);
   Serial.println(distance1);
@@ -222,8 +224,8 @@ void receiveEvent(int howMany) {
 
 // function that executes whenever data is requested from master
 void requestEvent() { /*send string on request */
-  char buffer[32];
-  a.toCharArray(buffer, 32);
+  char buffer[40];
+  dataSend.toCharArray(buffer,40);
   Wire.write(buffer);
 }
 void GetEC() {
