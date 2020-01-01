@@ -24,7 +24,8 @@ int ECPin = A0;
 int ECGround = A1; //=> Cam vs GND
 int ECPower = A3;
 int relayStatus=0;
-int distance1;
+float distance1;
+int distancelast;
 int SlaveReceived=0;
 //*********** Converting to ppm [Learn to use EC it is much better**************//
 // Hana      [USA]        PPMconverion:  0.5
@@ -55,7 +56,7 @@ float Vdrop = 0;
 float Rc = 0;
 float buffer1 = 0;
 /////
-int distance;
+float distance;
 void setup() {
   Wire.begin(8);                /* join i2c bus with address 8 */
   Wire.onReceive(receiveEvent); /* register receive event */
@@ -81,11 +82,6 @@ void setup() {
   //////////////////
   Serial.begin(9600);           /* start ser-ial for debug */
   dht.begin(); // Khởi động cảm biến DHT11, (Nhiệt độ, độ ẩm)
-//digitalWrite(RelayPpm, HIGH);
-//digitalWrite(RelayWaterIn, HIGH);
-//digitalWrite(RelayWaterOut, HIGH);
-//digitalWrite(RelayPump, HIGH);
-//digitalWrite(RelayMix, HIGH);
 }
 
 void loop() {
@@ -98,45 +94,28 @@ void loop() {
   float h = dht.readHumidity();    //Đọc độ ẩm
   float temp = dht.readTemperature(); //Đọc nhiệt độ
   int lig = analogRead(Light);
-  Serial.print("anh sang: ");
-  Serial.print(lig);
-  Serial.print("Nhiet do: ");
-  Serial.println(temp);               //Xuất nhiệt độ
-  Serial.print("Do am: ");
-  Serial.println(h);               //Xuất độ ẩm
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
-  const unsigned long duration = pulseIn(ECHO_PIN, HIGH);
-  distance1 = duration / 29 / 2;
-  distance = 100- (distance1*100/22);
-  if(distance < 0){
-    distance = 0;
+  float duration = pulseIn(ECHO_PIN, HIGH);
+  distance1 = duration / 29.412 / 2;
+  distance = 100 - ((distance1 - 3)*100/16); //Min 3cm, Max 19 cm
+  distancelast = roundf(distance * 100) / 100;
+  if(distancelast < 0){
+    distancelast = 0;
     }
-  if(distance >100){
-    distance =100;
+  if(distancelast >100){
+    distancelast = 100;
     }
-  if (duration == 0) {
-    Serial.println("Warning: no pulse from sensor");
-  }
-  else {
-    Serial.print(distance1);
-    Serial.println(" cm");
-  }
   sensors.requestTemperatures();// Send the command to get temperatures
   Temperature = sensors.getTempCByIndex(0); //Stores Value in Variable
   /////////////////////////////EC PPM
   GetEC();          //Calls Code to Go into GetEC() Loop [Below Main Loop] dont call this more that 1/5 hhz [once every five seconds] or you will polarise the water
-  PrintReadings();  // Cals Print routine [below main loop]
   // id, device_id, temperature, humidity, light, EC, PPM, water, pump
-  dataSend = "6=" + (String)temp + "=" + (String)h + "=" +(String)lig + "=" + (String)EC25 + "=" + (String)ppm + "=" + (String)distance + "="  +(String)relayStatus;
+  dataSend = "6=" + (String)temp + "=" + (String)h + "=" +(String)lig + "=" + (String)EC25 + "=" + (String)ppm + "=" + (String)distancelast + "="  +(String)relayStatus;
   Serial.println(dataSend);
-  Serial.println("relayStatus");
-  Serial.println(relayStatus);
-  Serial.println(distance1);
-  Serial.println(distance);
   ////////
   delay(5000); // [Dont read Ec more than once every 5 seconds]
 }
@@ -250,31 +229,3 @@ void GetEC() {
   ppm = (EC25) * (PPMconversion * 1000);
 }
 //************************** End OF EC Function ***************************//
-
-
-
-
-//***This Loop Is called From Main Loop- Prints to serial usefull info ***//
-void PrintReadings() {
-  Serial.print("Rc: ");
-  Serial.print(Rc);
-  Serial.print(" EC: ");
-  Serial.print(EC25);
-  Serial.print(" Simens  ");
-  Serial.print(ppm);
-  Serial.print(" ppm  ");
-  Serial.print(Temperature);
-  Serial.println(" *C  ");
-
-
-  /*
-    //********** Usued for Debugging ************
-    Serial.print("Vdrop: ");
-    Serial.println(Vdrop);
-    Serial.print("Rc: ");
-    Serial.println(Rc);
-    Serial.print(EC);
-    Serial.println("Siemens");
-    //********** end of Debugging Prints *********
-  */
-};
